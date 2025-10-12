@@ -1,6 +1,31 @@
+#include <sys/types.h>
+#include <sys/stat.h>
+
+#include <fts.h>
 #include <stdio.h>
-#include <unistd.h>
 #include <stdlib.h>
+#include <unistd.h>
+
+#include "cmp.h"
+#include "ls.h"
+
+void
+print_traverse(char *paths[])
+{
+    FTS *fts = fts_open(paths, FTS_SEEDOT, ascending);
+    FTSENT *entry;
+
+    while ((entry = fts_read(fts))) {
+        if (entry->fts_level == 1 && entry->fts_name[0] != '.') {
+            printf("%s\n", entry->fts_name);
+        }
+    }
+
+    if (fts_close(fts) < 0) {
+        fprintf(stderr, "ls: fts_close: failed to close fts");
+        exit(EXIT_FAILURE);
+    }
+}
 
 static void
 usage()
@@ -142,5 +167,11 @@ main(int argc, char *argv[])
     if (wflag) {
         printf("-w not implemented yet!\n");
     }
+
+    if (argv[0] == NULL) {
+        argv[0] = ".";
+    }
+
+    print_traverse(argv);    
     return 0;
 }
