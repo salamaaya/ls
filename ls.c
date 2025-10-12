@@ -4,20 +4,55 @@
 #include <fts.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "cmp.h"
+#include "flags.h"
 #include "ls.h"
 
+/*
+ * checks whether a file is hidden or not.
+ * return values:
+ *  - 1: file is hidden
+ *  - 0: file is not hidden
+ */
+int
+is_hidden(const char* file_name) {
+    if (file_name[0] == '.') {
+        return 1;
+    }
+    return 0;
+}
+
+/*
+ * traverses the given paths based on the given flags, prints each file name
+ * along the traversal.
+ */
 void
-print_traverse(char *paths[])
+print_traverse(char *paths[], int flags)
 {
-    FTS *fts = fts_open(paths, FTS_SEEDOT, ascending);
+    char *file_name;
+    FTS *fts;
     FTSENT *entry;
+    
+    if (flags & FLAG_f) {
+        fts = fts_open(paths, FTS_SEEDOT, NULL);
+    } else {
+        fts = fts_open(paths, FTS_SEEDOT, ascending);
+    }
 
     while ((entry = fts_read(fts))) {
-        if (entry->fts_level == 1 && entry->fts_name[0] != '.') {
-            printf("%s\n", entry->fts_name);
+        file_name = entry->fts_name; 
+        if (entry->fts_info != FTS_DP && entry->fts_level == 1) {
+            if (flags == 0 && is_hidden(file_name)) {
+                continue;
+            }
+            if ((flags & FLAG_A) && (strcmp(file_name, ".") == 0 ||
+                strcmp(file_name, "..") == 0)) {
+                    continue;
+            }
+            printf("%s\n", file_name);
         }
     }
 
@@ -38,69 +73,66 @@ int
 main(int argc, char *argv[])
 {
     int ch;
-    int Aflag = 0, aflag = 0, cflag = 0, dflag = 0, Fflag = 0, fflag = 0,
-        hflag = 0, iflag = 0, kflag = 0, lflag = 0, nflag = 0, qflag = 0,
-        Rflag = 0, rflag = 0, Sflag = 0, sflag = 0, tflag = 0, uflag = 0,
-        wflag = 0;
+    int flags;
 
     while ((ch = getopt(argc, argv, "AacdFfhiklnqRrSstuw")) != -1) {
         switch (ch) {
         case 'A':
-            Aflag = 1;
+            flags |= FLAG_A;
             break;
         case 'a':
-            aflag = 1;
+            flags |= FLAG_a;
             break;
         case 'c':
-            cflag = 1;
+            flags |= FLAG_c;
             break;
         case 'd':
-            dflag = 1;
+            flags |= FLAG_d;
             break;
         case 'F':
-            Fflag = 1;
+            flags |= FLAG_F;
             break;
         case 'f':
-            fflag = 1;
+            flags |= FLAG_f;
             break;
         case 'h':
-            hflag = 1;
+            flags |= FLAG_h;
             break;
         case 'i':
-            iflag = 1;
+            flags |= FLAG_i;
             break;
         case 'k':
-            kflag = 1;
+            flags |= FLAG_k;
             break;
         case 'l':
-            lflag = 1;
+            flags |= FLAG_l;
             break;
         case 'n':
-            nflag = 1;
+            flags |= FLAG_n;
             break;
         case 'q':
-            qflag = 1;
+            flags |= FLAG_q;
             break;
         case 'R':
-            Rflag = 1;
+            flags |= FLAG_R;
             break;
         case 'r':
-            rflag = 1;
+            flags |= FLAG_r;
             break;
         case 'S':
-            Sflag = 1;
+            flags |= FLAG_S;
             break;
         case 's':
-            sflag = 1;
+            flags |= FLAG_s;
             break;
         case 't':
-            tflag = 1;
+            flags |= FLAG_t;
             break;
         case 'u':
-            uflag = 1;
+            flags |= FLAG_u;
             break;
         case 'w':
-            wflag = 1;
+            flags |= FLAG_w;
             break;
         case '?':
         default:
@@ -110,68 +142,10 @@ main(int argc, char *argv[])
     argc -= optind;
     argv += optind;
     
-    if (Aflag) {
-        printf("-A not implemented yet!\n");
-    }
-    if (aflag) {
-        printf("-a not implemented yet!\n");
-    }
-    if (cflag) {
-        printf("-c not implemented yet!\n");
-    }
-    if (dflag) {
-        printf("-d not implemented yet!\n");
-    }
-    if (Fflag) {
-        printf("-F not implemented yet!\n");
-    }
-    if (fflag) {
-        printf("-f not implemented yet!\n");
-    }
-    if (hflag) {
-        printf("-h not implemented yet!\n");
-    }
-    if (iflag) {
-        printf("-i not implemented yet!\n");
-    }
-    if (kflag) {
-        printf("-k not implemented yet!\n");
-    }
-    if (lflag) {
-        printf("-l not implemented yet!\n");
-    }
-    if (nflag) {
-        printf("-n not implemented yet!\n");
-    }
-    if (qflag) {
-        printf("-q not implemented yet!\n");
-    }
-    if (Rflag) {
-        printf("-R not implemented yet!\n");
-    }
-    if (rflag) {
-        printf("-r not implemented yet!\n");
-    }
-    if (Sflag) {
-        printf("-S not implemented yet!\n");
-    }
-    if (sflag) {
-        printf("-s not implemented yet!\n");
-    }
-    if (tflag) {
-        printf("-t not implemented yet!\n");
-    }
-    if (uflag) {
-        printf("-u not implemented yet!\n");
-    }
-    if (wflag) {
-        printf("-w not implemented yet!\n");
-    }
-
     if (argv[0] == NULL) {
         argv[0] = ".";
     }
 
-    print_traverse(argv);    
+    print_traverse(argv, flags);    
     return 0;
 }
