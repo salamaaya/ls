@@ -1,3 +1,6 @@
+#ifndef _FLAGS_H_
+#define _FLAGS_H_
+
 #define FLAG_A (1 << 0)
 #define FLAG_a (1 << 1)
 #define FLAG_c (1 << 2)
@@ -18,3 +21,4 @@
 #define FLAG_u (1 << 17)
 #define FLAG_w (1 << 18)
 
+#endif

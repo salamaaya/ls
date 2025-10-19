@@ -1,0 +1,25 @@
+commit 62cd521f1f72f02b5637047ffeb80d7a196c7dcf
+Author: Aya Salama <asalama0204@gmail.com>
+Date:   Sun Oct 12 19:45:00 2025 +0000
+
+    created a bit mask for better handling of flags & implemented the -A -a -f flags
+
+commit e4256885868d8efe6a36e0c89ea068062ab2a170
+Author: Aya Salama <asalama0204@gmail.com>
+Date:   Sun Oct 12 18:30:24 2025 +0000
+
+    implementation of ls with no flags
+
+commit 12f30c45f671b0d37e3095d5948f894eabdddfdc
+Author: Aya Salama <asalama0204@gmail.com>
+Date:   Fri Oct 10 18:09:27 2025 +0000
+
+    handle flags
+    
+    delete executable
+
+commit 93c7a66318c6ba3aedb85049fa296549a338f66d
+Author: Aya Salama <asalama0204@gmail.com>
+Date:   Tue Oct 7 22:12:59 2025 +0000
+
+    initial files

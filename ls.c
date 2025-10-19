@@ -1,7 +1,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include <fts.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,6 +10,7 @@
 #include "cmp.h"
 #include "flags.h"
 #include "ls.h"
+#include "print.h"
 
 /*
  * checks whether a file is hidden or not.
@@ -18,8 +19,8 @@
  *  - 0: file is not hidden
  */
 int
-is_hidden(const char* file_name) {
-    if (file_name[0] == '.') {
+is_hidden(const char* filename) {
+    if (filename[0] == '.') {
         return 1;
     }
     return 0;
@@ -30,34 +31,55 @@ is_hidden(const char* file_name) {
  * along the traversal.
  */
 void
-print_traverse(char *paths[], int flags)
+traverse(char *paths[], int flags)
 {
-    char *file_name;
+    char *filename;
     FTS *fts;
     FTSENT *entry;
-    
+    int (*compar)(const FTSENT **, const FTSENT **) = ascending;
+
     if (flags & FLAG_f) {
-        fts = fts_open(paths, FTS_SEEDOT, NULL);
-    } else {
-        fts = fts_open(paths, FTS_SEEDOT, ascending);
+        compar = NULL;
+    } else if (flags & FLAG_r) {
+        compar = descending;
+    } else if (flags & FLAG_S) {
+        compar = size;
+    } else if (flags & FLAG_t) {
+        compar = mtime;
+    } else if (flags & FLAG_u) {
+        compar = atime;
+    }
+
+    if ((fts = fts_open(paths, FTS_SEEDOT, compar)) == NULL) {
+        fprintf(stderr, "ls: fts_open: %s\n", strerror(errno));
+        exit(EXIT_FAILURE);
     }
 
     while ((entry = fts_read(fts))) {
-        file_name = entry->fts_name; 
-        if (entry->fts_info != FTS_DP && entry->fts_level == 1) {
-            if (flags == 0 && is_hidden(file_name)) {
+        filename = entry->fts_name;
+
+        if (entry->fts_level == 1) {
+            /* if ((flags & FLAG_l) && strcmp(filename, ".") == 0) {
+                printf("total %lld\n", dir_size(*fts));
+            } */
+
+            if (!(flags & FLAG_A) && !(flags & FLAG_a) && is_hidden(filename)) {
                 continue;
             }
-            if ((flags & FLAG_A) && (strcmp(file_name, ".") == 0 ||
-                strcmp(file_name, "..") == 0)) {
+            if ((flags & FLAG_A) && (strcmp(filename, ".") == 0 ||
+                strcmp(filename, "..") == 0)) {
                     continue;
             }
-            printf("%s\n", file_name);
+            if (flags & FLAG_l) {
+                print_file_long(filename, entry->fts_statp);
+            } else {
+                print_file(filename);
+            }
         }
     }
 
     if (fts_close(fts) < 0) {
-        fprintf(stderr, "ls: fts_close: failed to close fts");
+        fprintf(stderr, "ls: fts_close: %s\n", strerror(errno));
         exit(EXIT_FAILURE);
     }
 }
@@ -73,7 +95,7 @@ int
 main(int argc, char *argv[])
 {
     int ch;
-    int flags;
+    int flags = 0;
 
     while ((ch = getopt(argc, argv, "AacdFfhiklnqRrSstuw")) != -1) {
         switch (ch) {
@@ -146,6 +168,6 @@ main(int argc, char *argv[])
         argv[0] = ".";
     }
 
-    print_traverse(argv, flags);    
+    traverse(argv, flags);    
     return 0;
 }
