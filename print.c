@@ -17,7 +17,17 @@
 void
 print_file(const char *path, const struct stat *sb, int flags)
 {
+    if (sb == NULL) {
+        fprintf(stderr, "ls: %s: %s\n", path, strerror(errno));
+        return;
+    }
+
+    if (flags & FLAG_i) {
+        printf("%ld ", sb->st_ino);
+    }
+
     printf("%s", path);
+
     if (flags & FLAG_F) {
         print_indicator(path, sb);
     }
@@ -37,6 +47,10 @@ void print_file_long(const char *path, const struct stat *sb, int flags)
     if (sb == NULL) {
         fprintf(stderr, "ls: %s: %s\n", path, strerror(errno));
         return;
+    }
+
+    if (flags & FLAG_i) {
+        printf("%ld ", sb->st_ino);
     }
 
     strmode(sb->st_mode, modes);
