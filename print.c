@@ -34,6 +34,11 @@ void print_file_long(const char *path, const struct stat *sb, int flags)
     struct group *gr;
     struct tm tm;
 
+    if (sb == NULL) {
+        fprintf(stderr, "ls: %s: %s\n", path, strerror(errno));
+        return;
+    }
+
     strmode(sb->st_mode, modes);
 
     pw = getpwuid(sb->st_uid);
@@ -54,13 +59,13 @@ void print_file_long(const char *path, const struct stat *sb, int flags)
         }
     }
 
-    if (owner == NULL) {
+    if (owner == NULL || (flags & FLAG_n)) {
         printf("%s %ld %u ", modes, nlink, (unsigned)sb->st_uid);
     } else {
         printf("%s %ld %s ", modes, nlink, owner);
     }
 
-    if (group == NULL) {
+    if (group == NULL || (flags & FLAG_n)) {
         printf("%u ", (unsigned)sb->st_gid);
     } else {
         printf("%s ", group);

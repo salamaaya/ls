@@ -68,11 +68,8 @@ traverse(char *paths[], int flags)
     int (*compar)(const FTSENT **, const FTSENT **) = ascending;
     int options = FTS_WHITEOUT | FTS_PHYSICAL;
 
-    if (flags & FLAG_a) {
-        options |= FTS_SEEDOT;
-    }
-
     if (flags & FLAG_f) {
+        flags |= FLAG_a; /* like NetBSD, -f implies -a */
         compar = NULL;
     } else if (flags & FLAG_r) {
         compar = descending;
@@ -87,6 +84,10 @@ traverse(char *paths[], int flags)
         }
     }
 
+    if (flags & FLAG_a) {
+        options |= FTS_SEEDOT;
+    }
+
     if ((fts = fts_open(paths, options, compar)) == NULL) {
         fprintf(stderr, "ls: fts_open: %s\n", strerror(errno));
         exit(EXIT_FAILURE);
@@ -94,7 +95,7 @@ traverse(char *paths[], int flags)
 
     while ((entry = fts_read(fts))) {
         if (should_print(flags, entry)) {
-            if (flags & FLAG_l) {
+            if ((flags & FLAG_l) || (flags & FLAG_n)) {
                 print_file_long(entry->fts_name, entry->fts_statp, flags);
             } else {
                 print_file(entry->fts_name, entry->fts_statp, flags);
