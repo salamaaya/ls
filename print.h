@@ -3,8 +3,8 @@
 
 #include <sys/stat.h>
 
-void print_file(const char *);
-void print_file_long(const char *, const struct stat *);
+void print_file(const char *, const struct stat *, int);
+void print_file_long(const char *, const struct stat *, int);
 void print_indicator(const char  *, const struct stat *);
 
 #endif

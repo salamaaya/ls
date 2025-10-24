@@ -8,7 +8,8 @@
 int ascending(const FTSENT **, const FTSENT **);
 int descending(const FTSENT **, const FTSENT **);
 int size(const FTSENT **, const FTSENT **);
-int mtime(const FTSENT **, const FTSENT **);
-int atime(const FTSENT **, const FTSENT **);
+int file_mtime(const FTSENT **, const FTSENT **);
+int file_atime(const FTSENT **, const FTSENT **);
+int file_ctime(const FTSENT **, const FTSENT **);
 
 #endif

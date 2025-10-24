@@ -1,3 +1,9 @@
+commit 7f084c10b018d3b108462f3f8a0fc5b6f4e5ecc2
+Author: Aya Salama <asalama0204@gmail.com>
+Date:   Sun Oct 19 20:18:17 2025 +0000
+
+    implemented long printing for -l and some other sorting options
+
 commit 62cd521f1f72f02b5637047ffeb80d7a196c7dcf
 Author: Aya Salama <asalama0204@gmail.com>
 Date:   Sun Oct 12 19:45:00 2025 +0000

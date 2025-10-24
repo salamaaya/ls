@@ -7,6 +7,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "flags.h"
 #include "print.h"
 
 /* Maximum buffer sizes used for formatted string. */
@@ -14,12 +15,16 @@
 #define MODESTR_SZ 11 /* e.g. "drwxr-xr-x" + NUL */
 
 void
-print_file(const char *path)
+print_file(const char *path, const struct stat *sb, int flags)
 {
-    printf("%s\n", path);
+    printf("%s", path);
+    if (flags & FLAG_F) {
+        print_indicator(path, sb);
+    }
+    printf("\n");
 }
 
-void print_file_long(const char *path, const struct stat *sb)
+void print_file_long(const char *path, const struct stat *sb, int flags)
 {
     char modes[MODESTR_SZ];
     char timebuf[TIMEBUF_SZ];
@@ -62,7 +67,10 @@ void print_file_long(const char *path, const struct stat *sb)
     }
 
     printf("%lld %s %s", (long long)sb->st_size, timebuf, path);
-    /* print_indicator(path, sb); */
+
+    if (flags & FLAG_F) {
+        print_indicator(path, sb);
+    }
     printf("\n");
 }
 

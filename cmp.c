@@ -28,23 +28,37 @@ size(const FTSENT **entry1, const FTSENT **entry2)
 }
 
 int
-mtime(const FTSENT **entry1, const FTSENT **entry2)
+file_mtime(const FTSENT **entry1, const FTSENT **entry2)
 {
-    if ((*entry1)->fts_statp->st_mtime > (*entry2)->fts_statp->st_mtime) {
-        return -1;
-    } else if ((*entry1)->fts_statp->st_mtime < (*entry2)->fts_statp->st_mtime) {
-        return 1;
+    double diff = difftime((*entry2)->fts_statp->st_mtime, 
+        (*entry1)->fts_statp->st_mtime);
+
+    if (diff == 0) {
+        return descending(entry1, entry2);
     }
-    return 0; 
+    return diff;
 }
 
 int
-atime(const FTSENT **entry1, const FTSENT **entry2)
+file_atime(const FTSENT **entry1, const FTSENT **entry2)
 {
-    if ((*entry1)->fts_statp->st_atime > (*entry2)->fts_statp->st_atime) {
-        return -1;
-    } else if ((*entry1)->fts_statp->st_atime < (*entry2)->fts_statp->st_atime) {
-        return 1;
+    double diff = difftime((*entry2)->fts_statp->st_atime, 
+        (*entry1)->fts_statp->st_atime);
+
+    if (diff == 0) {
+        return descending(entry1, entry2);
     }
-    return 0; 
+    return diff;
+}
+
+int
+file_ctime(const FTSENT **entry1, const FTSENT **entry2)
+{
+    double diff = difftime((*entry2)->fts_statp->st_ctime, 
+        (*entry1)->fts_statp->st_ctime);
+
+    if (diff == 0) {
+        return descending(entry1, entry2);
+    }
+    return diff;
 }

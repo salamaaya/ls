@@ -27,16 +27,50 @@ is_hidden(const char* filename) {
 }
 
 /*
+ * determines whether a file should be printed based on the current flags
+ * set and the entry's FTSENT struct info.
+ * return values:
+ *  0: file info should not be printed
+ *  1: file info should be printed
+ */
+int
+should_print(int flags, FTSENT *entry) {
+    ushort info = entry->fts_info;
+
+    /* only print directory with -d */
+    if (info == FTS_DP && (flags & FLAG_d) && entry->fts_level < 1) {
+        return 1;
+    } else if (!(flags & FLAG_d) && entry->fts_level == 1) {
+        /* check if entry is being visited in post-order, a regular file,
+         * ".", or ".." */
+        if (info == FTS_DP || info == FTS_F || info == FTS_DOT) {
+            /* hidden files should only be printed in the case of -a and -A */
+            if (!(flags & (FLAG_A | FLAG_a)) && is_hidden(entry->fts_name)) {
+                return 0;
+            }
+            return 1;
+        }
+    } else if (flags & FLAG_R) {
+        return 1;
+    }
+    return 0;
+}
+
+/*
  * traverses the given paths based on the given flags, prints each file name
  * along the traversal.
  */
 void
 traverse(char *paths[], int flags)
 {
-    char *filename;
     FTS *fts;
     FTSENT *entry;
     int (*compar)(const FTSENT **, const FTSENT **) = ascending;
+    int options = FTS_WHITEOUT | FTS_PHYSICAL;
+
+    if (flags & FLAG_a) {
+        options |= FTS_SEEDOT;
+    }
 
     if (flags & FLAG_f) {
         compar = NULL;
@@ -45,35 +79,25 @@ traverse(char *paths[], int flags)
     } else if (flags & FLAG_S) {
         compar = size;
     } else if (flags & FLAG_t) {
-        compar = mtime;
-    } else if (flags & FLAG_u) {
-        compar = atime;
+        compar = file_mtime;
+        if (flags & FLAG_u) {
+            compar = file_atime;
+        } else if (flags & FLAG_c) {
+            compar = file_ctime;
+        }
     }
 
-    if ((fts = fts_open(paths, FTS_SEEDOT, compar)) == NULL) {
+    if ((fts = fts_open(paths, options, compar)) == NULL) {
         fprintf(stderr, "ls: fts_open: %s\n", strerror(errno));
         exit(EXIT_FAILURE);
     }
 
     while ((entry = fts_read(fts))) {
-        filename = entry->fts_name;
-
-        if (entry->fts_level == 1) {
-            /* if ((flags & FLAG_l) && strcmp(filename, ".") == 0) {
-                printf("total %lld\n", dir_size(*fts));
-            } */
-
-            if (!(flags & FLAG_A) && !(flags & FLAG_a) && is_hidden(filename)) {
-                continue;
-            }
-            if ((flags & FLAG_A) && (strcmp(filename, ".") == 0 ||
-                strcmp(filename, "..") == 0)) {
-                    continue;
-            }
+        if (should_print(flags, entry)) {
             if (flags & FLAG_l) {
-                print_file_long(filename, entry->fts_statp);
+                print_file_long(entry->fts_name, entry->fts_statp, flags);
             } else {
-                print_file(filename);
+                print_file(entry->fts_name, entry->fts_statp, flags);
             }
         }
     }
