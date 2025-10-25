@@ -1,3 +1,21 @@
+commit 34d6aa8c7532f982c67fb5f7fc0d239441ff1321
+Author: Aya Salama <asalama0204@gmail.com>
+Date:   Fri Oct 24 22:29:57 2025 +0000
+
+    implemented -i
+
+commit 9563443d9726ef8c4a7173443016d5c29f0c2244
+Author: Aya Salama <asalama0204@gmail.com>
+Date:   Fri Oct 24 22:23:31 2025 +0000
+
+    implemented -n
+
+commit 68099618b697ad01db27bbace4d8421dd432a4a1
+Author: Aya Salama <asalama0204@gmail.com>
+Date:   Fri Oct 24 21:40:29 2025 +0000
+
+    implemented the -F flag
+
 commit 7f084c10b018d3b108462f3f8a0fc5b6f4e5ecc2
 Author: Aya Salama <asalama0204@gmail.com>
 Date:   Sun Oct 19 20:18:17 2025 +0000

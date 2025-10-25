@@ -1,7 +1,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include <dirent.h>
 #include <errno.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,11 +21,55 @@
  *  - 0: file is not hidden
  */
 int
-is_hidden(const char* filename) {
+is_hidden(const char *filename)
+{
     if (filename[0] == '.') {
         return 1;
     }
     return 0;
+}
+/*
+ * calculates the total number of blocks a directory takes
+ */
+blkcnt_t
+get_dir_blk_size(const char *dir, int flags)
+{
+    blkcnt_t total = 0;
+    char path[PATH_MAX];
+    DIR *dp;
+    struct stat info;
+    struct dirent *entry;
+
+    if ((dp = opendir(dir)) == NULL) {
+        (void)fprintf(stderr, "ls: opendir: %s\n", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+    
+    while ((entry = readdir(dp))) {
+        if (!(flags & FLAG_a) && is_hidden(entry->d_name)) {
+            continue;
+        }
+
+        /*if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+            continue;
+        }*/
+        /* construct the full path to the subdir */
+        snprintf(path, sizeof(path), "%s/%s", dir, entry->d_name);
+
+        if (stat(path, &info) < 0) {
+            (void)fprintf(stderr, "ls: stat: %s: %s\n", path, strerror(errno));
+            continue;
+        }
+
+        total += info.st_blocks;
+    }
+
+    if (closedir(dp) < 0) {
+        (void)fprintf(stderr, "ls: closedir: %s\n", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+
+    return total;
 }
 
 /*
@@ -34,11 +80,14 @@ is_hidden(const char* filename) {
  *  1: file info should be printed
  */
 int
-should_print(int flags, FTSENT *entry) {
+should_print(int flags, FTSENT *entry)
+{
     ushort info = entry->fts_info;
 
     /* only print directory with -d */
-    if (info == FTS_DP && (flags & FLAG_d) && entry->fts_level < 1) {
+    if (info == FTS_DP && (flags & FLAG_d) && entry->fts_level == 0) {
+        return 1;
+    } else if (entry->fts_level == 0 && info == FTS_F) { /* single file ls */
         return 1;
     } else if (!(flags & FLAG_d) && entry->fts_level == 1) {
         /* check if entry is being visited in post-order, a regular file,
@@ -46,7 +95,7 @@ should_print(int flags, FTSENT *entry) {
         if (info == FTS_DP || info == FTS_F || info == FTS_DOT) {
             /* hidden files should only be printed in the case of -a and -A */
             if (!(flags & (FLAG_A | FLAG_a)) && is_hidden(entry->fts_name)) {
-                return 0;
+                    return 0;
             }
             return 1;
         }
@@ -61,15 +110,18 @@ should_print(int flags, FTSENT *entry) {
  * along the traversal.
  */
 void
-traverse(char *paths[], int flags)
+traverse(char *paths[], int argc, int flags)
 {
     FTS *fts;
     FTSENT *entry;
     int (*compar)(const FTSENT **, const FTSENT **) = ascending;
-    int options = FTS_WHITEOUT | FTS_PHYSICAL;
+    int options = FTS_WHITEOUT;
+
+    /* root i, used to keep track of the number of roots traversed,
+     * for printing purposes */
+    int ri = 0; 
 
     if (flags & FLAG_f) {
-        flags |= FLAG_a; /* like NetBSD, -f implies -a */
         compar = NULL;
     } else if (flags & FLAG_r) {
         compar = descending;
@@ -89,22 +141,31 @@ traverse(char *paths[], int flags)
     }
 
     if ((fts = fts_open(paths, options, compar)) == NULL) {
-        fprintf(stderr, "ls: fts_open: %s\n", strerror(errno));
+        (void)fprintf(stderr, "ls: fts_open: %s\n", strerror(errno));
         exit(EXIT_FAILURE);
     }
 
     while ((entry = fts_read(fts))) {
-        if (should_print(flags, entry)) {
-            if ((flags & FLAG_l) || (flags & FLAG_n)) {
-                print_file_long(entry->fts_name, entry->fts_statp, flags);
-            } else {
-                print_file(entry->fts_name, entry->fts_statp, flags);
+        if (entry->fts_info == FTS_D && entry->fts_level == 0) { 
+            /* if there are multiple paths to read, the first one has no \n */
+            if (ri >= 1) {
+                printf("\n");
             }
+            if (argc > 1) {
+                printf("%s:\n", entry->fts_path);
+            }
+            if (flags & FLAG_l) {
+                printf("total %ld\n", get_dir_blk_size(entry->fts_path, flags));
+            }
+            ri++;
+        }
+        if (should_print(flags, entry)) {
+            print_file(entry->fts_name, entry->fts_statp, flags);
         }
     }
 
     if (fts_close(fts) < 0) {
-        fprintf(stderr, "ls: fts_close: %s\n", strerror(errno));
+        (void)fprintf(stderr, "ls: fts_close: %s\n", strerror(errno));
         exit(EXIT_FAILURE);
     }
 }
@@ -119,8 +180,7 @@ usage()
 int
 main(int argc, char *argv[])
 {
-    int ch;
-    int flags = 0;
+    int ch, flags = 0;
 
     while ((ch = getopt(argc, argv, "AacdFfhiklnqRrSstuw")) != -1) {
         switch (ch) {
@@ -132,15 +192,18 @@ main(int argc, char *argv[])
             break;
         case 'c':
             flags |= FLAG_c;
+            flags &= ~FLAG_u; /* if -c is set, turn off -u */ 
             break;
         case 'd':
             flags |= FLAG_d;
+            flags &= ~FLAG_R; /* if -d is set, -R must be turned off */
             break;
         case 'F':
             flags |= FLAG_F;
             break;
         case 'f':
             flags |= FLAG_f;
+            flags |= FLAG_a; /* like NetBSD, -f implies -a */
             break;
         case 'h':
             flags |= FLAG_h;
@@ -156,12 +219,14 @@ main(int argc, char *argv[])
             break;
         case 'n':
             flags |= FLAG_n;
+            flags |= FLAG_l; /* -n implies -l */
             break;
         case 'q':
             flags |= FLAG_q;
             break;
         case 'R':
-            flags |= FLAG_R;
+            /* if -d is set, don't turn on -R */
+            flags = (flags & FLAG_d) ? flags : flags & FLAG_R;
             break;
         case 'r':
             flags |= FLAG_r;
@@ -177,6 +242,7 @@ main(int argc, char *argv[])
             break;
         case 'u':
             flags |= FLAG_u;
+            flags &= ~FLAG_c; /* if -u is set, turn off -c */ 
             break;
         case 'w':
             flags |= FLAG_w;
@@ -193,6 +259,6 @@ main(int argc, char *argv[])
         argv[0] = ".";
     }
 
-    traverse(argv, flags);    
+    traverse(argv, argc, flags);    
     return 0;
 }

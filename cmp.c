@@ -30,11 +30,18 @@ size(const FTSENT **entry1, const FTSENT **entry2)
 int
 file_mtime(const FTSENT **entry1, const FTSENT **entry2)
 {
+    /* first check the difference in time at the second level, but if they are
+     * the same, go down to nanosecond level */
     double diff = difftime((*entry2)->fts_statp->st_mtime, 
         (*entry1)->fts_statp->st_mtime);
 
     if (diff == 0) {
-        return descending(entry1, entry2);
+        long nano_diff = (*entry2)->fts_statp->st_mtimensec 
+            - (*entry1)->fts_statp->st_mtimensec;
+        if (nano_diff == 0) {
+            return descending(entry1, entry2);
+        }
+        return nano_diff;
     }
     return diff;
 }
@@ -42,11 +49,18 @@ file_mtime(const FTSENT **entry1, const FTSENT **entry2)
 int
 file_atime(const FTSENT **entry1, const FTSENT **entry2)
 {
+    /* first check the difference in time at the second level, but if they are
+     * the same, go down to nanosecond level */
     double diff = difftime((*entry2)->fts_statp->st_atime, 
         (*entry1)->fts_statp->st_atime);
 
     if (diff == 0) {
-        return descending(entry1, entry2);
+        long nano_diff = (*entry2)->fts_statp->st_atimensec 
+            - (*entry1)->fts_statp->st_atimensec;
+        if (nano_diff == 0) {
+            return descending(entry1, entry2);
+        }
+        return nano_diff;
     }
     return diff;
 }
@@ -54,11 +68,18 @@ file_atime(const FTSENT **entry1, const FTSENT **entry2)
 int
 file_ctime(const FTSENT **entry1, const FTSENT **entry2)
 {
+    /* first check the difference in time at the second level, but if they are
+     * the same, go down to nanosecond level */
     double diff = difftime((*entry2)->fts_statp->st_ctime, 
         (*entry1)->fts_statp->st_ctime);
 
     if (diff == 0) {
-        return descending(entry1, entry2);
+        long nano_diff = (*entry2)->fts_statp->st_ctimensec 
+            - (*entry1)->fts_statp->st_ctimensec;
+        if (nano_diff == 0) {
+            return descending(entry1, entry2);
+        }
+        return nano_diff;
     }
     return diff;
 }
