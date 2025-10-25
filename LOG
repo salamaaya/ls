@@ -1,3 +1,9 @@
+commit 7e4158eee74e56554ca48dbdbdf02884c14e5f4e
+Author: Aya Salama <asalama0204@gmail.com>
+Date:   Sat Oct 25 02:30:11 2025 +0000
+
+    get number of blocks in a directory
+
 commit 34d6aa8c7532f982c67fb5f7fc0d239441ff1321
 Author: Aya Salama <asalama0204@gmail.com>
 Date:   Fri Oct 24 22:29:57 2025 +0000

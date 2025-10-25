@@ -9,14 +9,32 @@
 
 #include "flags.h"
 #include "print.h"
+#include "utils.h"
 
 /* Maximum buffer sizes used for formatted string. */
 #define TIMEBUF_SZ 64
 #define MODESTR_SZ 11 /* e.g. "drwxr-xr-x" + NUL */
 
 void
+humanize(off_t bytes)
+{
+    /* buf needs to be small enough to ensure humanize_number autoscales */
+    char buf[5];
+
+    if (humanize_number(buf, sizeof(buf), bytes, "", HN_AUTOSCALE,
+        HN_B | HN_DECIMAL | HN_NOSPACE) < 0) {
+            fprintf(stderr, "ls: humanize_number: %s\n", strerror(errno));
+            exit(EXIT_FAILURE);
+    }
+
+    printf("%s", buf);
+}
+
+void
 print_file(const char *path, const struct stat *sb, int flags)
 {
+    long blks;
+
     if (sb == NULL) {
         fprintf(stderr, "ls: %s: %s\n", path, strerror(errno));
         return;
@@ -24,6 +42,21 @@ print_file(const char *path, const struct stat *sb, int flags)
 
     if (flags & FLAG_i) {
         printf("%ld ", sb->st_ino);
+    }
+
+    if (flags & FLAG_s) {
+        blks = get_file_blk_size(sb);
+        if (flags & FLAG_k) {
+            /* st_blocks are in units of 512 bytes, which is half a KB */
+            blks = sb->st_blocks / 2;
+        } 
+
+        if (flags & FLAG_h) {
+            humanize(sb->st_size);
+            printf(" ");
+        } else {
+            printf("%ld ", blks);
+        }
     }
     
     if (flags & FLAG_l) {
@@ -38,7 +71,8 @@ print_file(const char *path, const struct stat *sb, int flags)
     printf("\n");
 }
 
-void print_file_long(const char *path, const struct stat *sb, int flags)
+void
+print_file_long(const char *path, const struct stat *sb, int flags)
 {
     char modes[MODESTR_SZ];
     char timebuf[TIMEBUF_SZ];
@@ -87,7 +121,12 @@ void print_file_long(const char *path, const struct stat *sb, int flags)
         printf("%s ", group);
     }
 
-    printf("%lld %s %s", (long long)sb->st_size, timebuf, path);
+    if (flags & FLAG_h) {
+        humanize(sb->st_size);
+        printf(" %s %s", timebuf, path);
+    } else {
+        printf("%lld %s %s", (long long)sb->st_size, timebuf, path);
+    }
 }
 
 void

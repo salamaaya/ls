@@ -3,7 +3,7 @@ CFLAGS=	-ansi -g -Wall -Werror -Wextra -Wformat=2 -Wjump-misses-init \
 	-Wlogical-op -Wshadow
 
 PROG=	ls
-OBJS=	ls.o cmp.o print.o	
+OBJS=	ls.o cmp.o print.o utils.o	
 
 all: ${PROG}
 

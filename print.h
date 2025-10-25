@@ -6,5 +6,6 @@
 void print_file(const char *, const struct stat *, int);
 void print_file_long(const char *, const struct stat *, int);
 void print_indicator(const char  *, const struct stat *);
+void humanize(off_t);
 
 #endif
