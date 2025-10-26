@@ -21,4 +21,6 @@
 #define FLAG_u (1 << 17)
 #define FLAG_w (1 << 18)
 
+#define FLAG_headers (1 << 19)
+
 #endif

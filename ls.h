@@ -4,8 +4,10 @@
 #include <fts.h>
 
 static void usage(void);
-void traverse(char *[], int, int);
+void traverse(char *[], int);
 int main(int, char *[]);
-int should_print(int, FTSENT *);
+int should_print(FTSENT *, int);
+int print_hidden(const char *, int);
+int print_header(FTSENT *, int);
 
 #endif

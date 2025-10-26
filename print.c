@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <errno.h>
 #include <grp.h>
 #include <limits.h>
@@ -31,9 +32,10 @@ humanize(off_t bytes)
 }
 
 void
-print_file(const char *path, const struct stat *sb, int flags)
+print_file(char *path, const struct stat *sb, int flags)
 {
     long blks;
+    size_t i;
 
     if (sb == NULL) {
         fprintf(stderr, "ls: %s: %s\n", path, strerror(errno));
@@ -58,7 +60,16 @@ print_file(const char *path, const struct stat *sb, int flags)
             printf("%ld ", blks);
         }
     }
-    
+
+    if (!(flags & FLAG_w)) {
+        /* remove non-printable characters */
+        for (i = 0; i < strlen(path); i++) {
+            if (!isprint((int)path[i])) {
+                path[i] = '?';
+            }
+        }
+    }
+
     if (flags & FLAG_l) {
         print_file_long(path, sb, flags);
     } else {

@@ -14,65 +14,21 @@
 #include "utils.h"
 
 /*
- * determines whether a file should be printed based on the current flags
- * set and the entry's FTSENT struct info.
- * return values:
- *  0: file info should not be printed
- *  1: file info should be printed
- */
-int
-should_print(int flags, FTSENT *entry)
-{
-    ushort info = entry->fts_info;
-    int level = entry->fts_level;
-
-    /* only print directory itself when -d is used */
-    if ((flags & FLAG_d) && info == FTS_DP && level == 0) {
-        return 1;
-    }
-
-    /* single file argument to ls */
-    if (level == 0 && info == FTS_F) {
-        return 1;
-    }
-
-    /* regular listing files inside directory */
-    if (!(flags & FLAG_d) && level == 1) {
-        /* check if entry is being visited in post-order, a regular file,
-         * ".", or ".." */
-        if (info == FTS_DP || info == FTS_F || info == FTS_DOT) {
-            /* hidden files should only be printed in the case of -a and -A */
-            if (!(flags & (FLAG_A | FLAG_a)) && is_hidden(entry->fts_name)) {
-                    return 0;
-            }
-            return 1;
-        }
-    }
-
-    /* recursive listing */
-    if (flags & FLAG_R) {
-        return 1;
-    }
-
-    return 0;
-}
-
-/*
  * traverses the given paths based on the given flags, prints each file name
  * along the traversal.
  */
 void
-traverse(char *paths[], int argc, int flags)
+traverse(char *paths[], int flags)
 {
+    char *path;
     FTS *fts;
     FTSENT *entry;
     int (*compar)(const FTSENT **, const FTSENT **) = ascending;
-    int options = FTS_WHITEOUT;
-
-    /* root i, used to keep track of the number of roots traversed,
-     * for printing purposes */
-    int ri = 0; 
-    long blk_size;
+    int options = FTS_WHITEOUT | FTS_LOGICAL;
+    int dot_or_dot_dot, info, level, traverse, print; 
+    int print_dot = flags & (FLAG_A | FLAG_a);
+    int num_headers = 0;
+    long blk_size = 0;
 
     if (flags & FLAG_f) {
         compar = NULL;
@@ -99,16 +55,30 @@ traverse(char *paths[], int argc, int flags)
     }
 
     while ((entry = fts_read(fts))) {
-        if (entry->fts_info == FTS_D && entry->fts_level == 0) { 
-            /* if there are multiple paths to read, the first one has no \n */
-            if (ri >= 1) {
-                printf("\n");
-            }
-            if (argc > 1) {
+        info = entry->fts_info;
+        path = entry->fts_name;
+        level = entry->fts_level;
+        traverse = !(flags & FLAG_R) || (!print_dot && is_hidden(path));
+        dot_or_dot_dot = strcmp(path, ".") == 0 || strcmp(path, "..") == 0;
+        print = ((dot_or_dot_dot && (flags & FLAG_a) && info != FTS_D)
+                || (!dot_or_dot_dot && is_hidden(path) && print_dot) 
+                || !is_hidden(path)) && level > 0;
+
+        if (info == FTS_DNR || info == FTS_ERR) {
+            (void)fprintf(stderr, "ls: fts_read: %s\n", strerror(errno));
+            exit(EXIT_FAILURE);
+        }
+
+        if (info == FTS_D) {
+            if ((flags & FLAG_headers) && level == 0) {
+                if (num_headers > 0) {
+                    printf("\n");
+                }
                 printf("%s:\n", entry->fts_path);
+                num_headers++;
             }
-            if (flags & FLAG_l) {
-                blk_size = get_dir_blk_size(entry->fts_path, flags);
+            if ((flags & FLAG_l) && level == 0) {
+                blk_size = get_dir_blk_size(path, flags);
                 printf("total ");
                 if (flags & FLAG_h) {
                     humanize(blk_size);
@@ -117,10 +87,19 @@ traverse(char *paths[], int argc, int flags)
                     printf("%ld\n", blk_size);
                 }
             }
-            ri++;
+
+            if (level > 0 && traverse) {
+                if (fts_set(fts, entry, FTS_SKIP) < 0) { 
+                    (void)fprintf(stderr, "ls: fts_set: %s\n", strerror(errno));
+                    exit(EXIT_FAILURE);
+                }
+            }
         }
-        if (should_print(flags, entry)) {
-            print_file(entry->fts_name, entry->fts_statp, flags);
+
+        if (info != FTS_DP) {
+            if (print) {
+                print_file(path, entry->fts_statp, flags);
+            }
         }
     }
 
@@ -200,7 +179,7 @@ main(int argc, char *argv[])
             break;
         case 'R':
             /* if -d is set, don't turn on -R */
-            flags = (flags & FLAG_d) ? flags : flags & FLAG_R;
+            flags = (flags & FLAG_d) ? flags : flags | FLAG_R;
             break;
         case 'r':
             flags |= FLAG_r;
@@ -251,16 +230,18 @@ main(int argc, char *argv[])
     }
 
     if (filesp > 0) {
-        traverse(files, filesp, flags);
+        traverse(files, flags);
     }
     if (dirsp > 0) {
         if (filesp > 0) {
             printf("\n");
-            /* if there are files, then also print the labels on dirs */
-            traverse(dirs, dirsp+1, flags);
-        } else {
-            traverse(dirs, dirsp, flags);
         }
+
+        if (dirsp > 1) {
+            flags |= FLAG_headers;
+        }
+
+        traverse(dirs, flags);
     }
 
     free (files);
