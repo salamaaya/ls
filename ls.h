@@ -5,6 +5,7 @@
 
 static void usage(void);
 void traverse(char *[], int);
+void traverse_children(FTS *, int, int);
 int main(int, char *[]);
 int should_print(FTSENT *, int);
 int print_hidden(const char *, int);

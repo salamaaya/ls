@@ -13,6 +13,16 @@
 #include "print.h"
 #include "utils.h"
 
+/* global pointers which might have to be freed during unexpected exit */
+char **dirs, **files; 
+
+void
+free_exit(void)
+{
+    free(dirs);
+    free(files);
+}
+
 /*
  * traverses the given paths based on the given flags, prints each file name
  * along the traversal.
@@ -20,12 +30,12 @@
 void
 traverse(char *paths[], int flags)
 {
-    char *path;
+    char *file, *path;
     FTS *fts;
     FTSENT *entry;
     int (*compar)(const FTSENT **, const FTSENT **) = ascending;
-    int options = FTS_WHITEOUT | FTS_LOGICAL;
-    int dot_or_dot_dot, info, level, traverse, print; 
+    int options = FTS_WHITEOUT | FTS_PHYSICAL;
+    int info, level, stop_traverse, print_header; 
     int print_dot = flags & (FLAG_A | FLAG_a);
     int num_headers = 0;
     long blk_size = 0;
@@ -56,13 +66,11 @@ traverse(char *paths[], int flags)
 
     while ((entry = fts_read(fts))) {
         info = entry->fts_info;
-        path = entry->fts_name;
+        path = entry->fts_path;
+        file = entry->fts_name;
         level = entry->fts_level;
-        traverse = !(flags & FLAG_R) || (!print_dot && is_hidden(path));
-        dot_or_dot_dot = strcmp(path, ".") == 0 || strcmp(path, "..") == 0;
-        print = ((dot_or_dot_dot && (flags & FLAG_a) && info != FTS_D)
-                || (!dot_or_dot_dot && is_hidden(path) && print_dot) 
-                || !is_hidden(path)) && level > 0;
+        print_header = !(flags & FLAG_R)
+                || ((flags & FLAG_R) && level > 0);
 
         if (info == FTS_DNR || info == FTS_ERR) {
             (void)fprintf(stderr, "ls: fts_read: %s\n", strerror(errno));
@@ -70,14 +78,28 @@ traverse(char *paths[], int flags)
         }
 
         if (info == FTS_D) {
-            if ((flags & FLAG_headers) && level == 0) {
-                if (num_headers > 0) {
+            if (!(flags & FLAG_R)) {
+                stop_traverse = 1;
+            } else if (level > 0 && !print_dot && is_hidden(file)) {
+                stop_traverse = 1;
+            } else {
+                stop_traverse = 0;
+            }
+
+            if (flags & FLAG_d) {
+                printf("%s\n", path);
+            }
+            if (flags & FLAG_headers) {
+                if (num_headers > 0 && !stop_traverse) {
                     printf("\n");
                 }
-                printf("%s:\n", entry->fts_path);
+
+                if (print_header && !stop_traverse) {
+                    printf("%s:\n", path);
+                }
                 num_headers++;
             }
-            if ((flags & FLAG_l) && level == 0) {
+            if ((flags & FLAG_l) && (level == 0 || (flags & FLAG_R))) {
                 blk_size = get_dir_blk_size(path, flags);
                 printf("total ");
                 if (flags & FLAG_h) {
@@ -88,24 +110,40 @@ traverse(char *paths[], int flags)
                 }
             }
 
-            if (level > 0 && traverse) {
+            if (stop_traverse || (flags & FLAG_d)) {
                 if (fts_set(fts, entry, FTS_SKIP) < 0) { 
                     (void)fprintf(stderr, "ls: fts_set: %s\n", strerror(errno));
                     exit(EXIT_FAILURE);
                 }
             }
-        }
 
-        if (info != FTS_DP) {
-            if (print) {
-                print_file(path, entry->fts_statp, flags);
+            if (!(flags & FLAG_d) && ((!stop_traverse) || !(flags & FLAG_R))) {
+                traverse_children(fts, flags, print_dot);
             }
+        } else if (info != FTS_D && info != FTS_DP && level == 0) {
+            print_file(file, entry->fts_statp, flags);
         }
     }
 
     if (fts_close(fts) < 0) {
         (void)fprintf(stderr, "ls: fts_close: %s\n", strerror(errno));
         exit(EXIT_FAILURE);
+    }
+}
+
+void
+traverse_children(FTS *fts, int flags, int print_hidden)
+{
+    char *file;
+    FTSENT *children = fts_children(fts, 0);
+    FTSENT *node = children;
+
+    while (node != NULL) {
+        file = node->fts_name;
+        if ((print_hidden && is_hidden(file)) || !is_hidden(file)) {
+            print_file(file, node->fts_statp, flags);
+        }
+        node = node->fts_link;
     }
 }
 
@@ -119,10 +157,16 @@ usage()
 int
 main(int argc, char *argv[])
 {
-    char **dirs = malloc(argc * sizeof(char *));
-    char **files = malloc(argc * sizeof(char *));
     int ch, dirsp = 0, filesp = 0, flags = 0, i;
     struct stat info;
+    
+    if (atexit(free_exit) != 0) {
+        perror("can't register free_exit\n");
+		exit(EXIT_FAILURE);
+	}
+
+    dirs = malloc(argc * sizeof(char *));
+    files = malloc(argc * sizeof(char *));
 
     if (dirs == NULL) {
         (void)fprintf(stderr, "ls: malloc: %s\n", strerror(errno));
@@ -235,9 +279,14 @@ main(int argc, char *argv[])
     if (dirsp > 0) {
         if (filesp > 0) {
             printf("\n");
+            flags |= FLAG_headers;
         }
 
-        if (dirsp > 1) {
+        if (dirsp > 1 && !(flags & FLAG_d)) {
+            flags |= FLAG_headers;
+        }
+
+        if (flags & FLAG_R) {
             flags |= FLAG_headers;
         }
 

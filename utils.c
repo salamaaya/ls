@@ -52,11 +52,15 @@ get_dir_blk_size(const char *dir, int flags)
         } else if (!(flags & (FLAG_a | FLAG_A)) && is_hidden(entry->d_name)) {
             continue;
         }
-
+        
         /* construct the full path to the subdir */
-        snprintf(path, sizeof(path), "%s/%s", dir, entry->d_name);
+        if (dir[strlen(dir)-1] != '/') {
+            snprintf(path, sizeof(path), "%s/%s", dir, entry->d_name);
+        } else {
+            snprintf(path, sizeof(path), "%s%s", dir, entry->d_name);
+        }
 
-        if (stat(path, &info) < 0) {
+        if (lstat(path, &info) < 0) {
             (void)fprintf(stderr, "ls: stat: %s: %s\n", path, strerror(errno));
             continue;
         }

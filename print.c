@@ -74,11 +74,11 @@ print_file(char *path, const struct stat *sb, int flags)
         print_file_long(path, sb, flags);
     } else {
         printf("%s", path);
+        if (flags & FLAG_F) {
+            print_indicator(sb);
+        }
     }
 
-    if (flags & FLAG_F) {
-        print_indicator(path, sb);
-    }
     printf("\n");
 }
 
@@ -132,28 +132,37 @@ print_file_long(const char *path, const struct stat *sb, int flags)
         printf("%s ", group);
     }
 
-    if (flags & FLAG_h) {
+    if (S_ISCHR(sb->st_mode)) {
+        printf("%u, %u %s %s", major(sb->st_rdev), minor(sb->st_rdev), 
+            timebuf, path);
+    } else if (flags & FLAG_h) {
         humanize(sb->st_size);
         printf(" %s %s", timebuf, path);
     } else {
         printf("%lld %s %s", (long long)sb->st_size, timebuf, path);
     }
-}
 
-void
-print_indicator(const char *path, const struct stat *sb)
-{
-    if (S_ISDIR(sb->st_mode)) {
-        printf("/");
+    if (flags & FLAG_F) {
+        print_indicator(sb);
     }
 
     if (S_ISLNK(sb->st_mode)) {
         char filename[PATH_MAX];
-        if (readlink(path, filename, sizeof(filename)) < 0) {
+        ssize_t len;
+        if ((len = readlink(path, filename, sizeof(filename))) < 0) {
             fprintf(stderr, "stat: readlink: %s\n", strerror(errno));
             exit(EXIT_FAILURE);
         }
-        printf("@ -> %s", filename);
+        filename[len] = '\0';
+        printf(" -> %s", filename);
+    }
+}
+
+void
+print_indicator(const struct stat *sb)
+{
+    if (S_ISDIR(sb->st_mode)) {
+        printf("/");
     }
 
     if (S_ISWHT(sb->st_mode)) {
@@ -166,6 +175,10 @@ print_indicator(const char *path, const struct stat *sb)
 
     if (S_ISFIFO(sb->st_mode)) {
         printf("|");
+    }
+
+    if (S_ISLNK(sb->st_mode)) {
+        printf("@");
     }
 
     if (S_ISREG(sb->st_mode) && (sb->st_mode & (S_IXUSR |S_IXGRP | S_IXOTH))) {
