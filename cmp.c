@@ -83,3 +83,28 @@ file_ctime(const FTSENT **entry1, const FTSENT **entry2)
     }
     return diff;
 }
+
+int
+size_rev(const FTSENT **entry1, const FTSENT **entry2)
+{
+    return size(entry2, entry1);
+}
+
+int
+file_mtime_rev(const FTSENT **entry1, const FTSENT **entry2)
+{
+    return file_mtime(entry2, entry1);
+}
+
+int
+file_atime_rev(const FTSENT **entry1, const FTSENT **entry2)
+{
+    return file_atime(entry2, entry1);
+}
+
+int
+file_ctime_rev(const FTSENT **entry1, const FTSENT **entry2)
+{
+    return file_ctime(entry2, entry1);
+}
+

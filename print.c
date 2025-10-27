@@ -48,15 +48,14 @@ print_file(char *file, char *path, const struct stat *sb, int flags)
 
     if (flags & FLAG_s) {
         blks = get_file_blk_size(sb);
-        if (flags & FLAG_k) {
-            /* st_blocks are in units of 512 bytes, which is half a KB */
-            blks = sb->st_blocks / 2;
-        } 
-
         if (flags & FLAG_h) {
             humanize(sb->st_size);
             printf(" ");
         } else {
+            if (flags & FLAG_k) {
+                /* st_blocks are in units of 512 bytes, which is half a KB */
+                blks = sb->st_blocks / 2;
+            } 
             printf("%ld ", blks);
         }
     }

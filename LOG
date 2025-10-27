@@ -1,3 +1,27 @@
+commit cc03c83c0366c912a55fad84e6d58c7cb2ba922a
+Author: Aya Salama <asalama0204@gmail.com>
+Date:   Mon Oct 27 01:26:55 2025 +0000
+
+    final touches
+
+commit 8b848fb2c59168a7e8b226d63fb784f6337332bf
+Author: Aya Salama <asalama0204@gmail.com>
+Date:   Sun Oct 26 23:35:38 2025 +0000
+
+    finally implemented -R
+
+commit 86007dab6b4456a1bef01362a94513c4741370ea
+Author: Aya Salama <asalama0204@gmail.com>
+Date:   Sun Oct 26 18:19:03 2025 +0000
+
+    refactored printing
+
+commit ea2347e9aa9dae997a4e0d0658abfd394c45384b
+Author: Aya Salama <asalama0204@gmail.com>
+Date:   Sat Oct 25 07:13:47 2025 +0000
+
+    implemented -h and added some util funcitons for better organization
+
 commit 7e4158eee74e56554ca48dbdbdf02884c14e5f4e
 Author: Aya Salama <asalama0204@gmail.com>
 Date:   Sat Oct 25 02:30:11 2025 +0000

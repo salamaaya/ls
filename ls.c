@@ -42,16 +42,32 @@ traverse(char *paths[], int flags)
 
     if (flags & FLAG_f) {
         compar = NULL;
-    } else if (flags & FLAG_r) {
-        compar = descending;
-    } else if (flags & FLAG_S) {
-        compar = size;
-    } else if (flags & FLAG_t) {
-        compar = file_mtime;
+    }
+    if (flags & FLAG_S) {
+        if (flags & FLAG_r) {
+            compar = size_rev;
+        } else {
+            compar = size;
+        }
+    }
+    if (flags & FLAG_t) {
+        if (flags & FLAG_r) {
+            compar = file_mtime_rev;
+        } else {
+            compar = file_mtime;
+        }
         if (flags & FLAG_u) {
-            compar = file_atime;
+            if (flags & FLAG_r) {
+                compar = file_atime_rev;
+            } else {
+                compar = file_atime;
+            }
         } else if (flags & FLAG_c) {
-            compar = file_ctime;
+            if (flags & FLAG_r) {
+                compar = file_ctime_rev;
+            } else {
+                compar = file_ctime;
+            }
         }
     }
 

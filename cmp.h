@@ -11,5 +11,9 @@ int size(const FTSENT **, const FTSENT **);
 int file_mtime(const FTSENT **, const FTSENT **);
 int file_atime(const FTSENT **, const FTSENT **);
 int file_ctime(const FTSENT **, const FTSENT **);
+int size_rev(const FTSENT **, const FTSENT **);
+int file_mtime_rev(const FTSENT **, const FTSENT **);
+int file_atime_rev(const FTSENT **, const FTSENT **);
+int file_ctime_rev(const FTSENT **, const FTSENT **);
 
 #endif

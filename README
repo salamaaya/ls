@@ -1,0 +1,40 @@
+ls - CS631 midterm
+
+This small project implements a simplified version of the NetBSD `ls` utility. 
+
+Build
+-----
+Run make in the project directory to build the program:
+
+	make
+
+This will produce an executable (named `ls`) according to the provided Makefile.
+
+Usage
+-----
+Basic usage (example):
+
+	./ls [options] [path]
+
+Repository layout
+-------------------------
+- `ls.c`       - main program entry and command-line handling
+- `ls.h`       - public declarations for the `ls` program
+- `cmp.c/h`    - comparison routines (sorting, ordering)
+- `print.c/h`  - printing/formatting of file entries
+- `utils.c/h`  - utility helpers used across the project
+- `flags.h`    - flag and option definitions
+- `Makefile`   - build rules
+- `checklist`  - assignment checklist (notes)
+- `LOG`        - logs or run output saved by the author
+
+Notes
+-----
+- There are many places in the code where checking combinations of flags 
+is required; this led to a large number of nested conditionals and loops. 
+As a result some parts of the implementation are messy and harder to follow. 
+If there are suggestions for a cleaner approach, I'd appreciate the guidance.
+
+Author
+------
+Aya Salama
