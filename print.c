@@ -32,13 +32,13 @@ humanize(off_t bytes)
 }
 
 void
-print_file(char *path, const struct stat *sb, int flags)
+print_file(char *file, char *path, const struct stat *sb, int flags)
 {
     long blks;
     size_t i;
 
     if (sb == NULL) {
-        fprintf(stderr, "ls: %s: %s\n", path, strerror(errno));
+        fprintf(stderr, "ls: %s: %s\n", file, strerror(errno));
         return;
     }
 
@@ -63,17 +63,17 @@ print_file(char *path, const struct stat *sb, int flags)
 
     if (!(flags & FLAG_w)) {
         /* remove non-printable characters */
-        for (i = 0; i < strlen(path); i++) {
-            if (!isprint((int)path[i])) {
-                path[i] = '?';
+        for (i = 0; i < strlen(file); i++) {
+            if (!isprint((int)file[i])) {
+                file[i] = '?';
             }
         }
     }
 
     if (flags & FLAG_l) {
-        print_file_long(path, sb, flags);
+        print_file_long(file, path, sb, flags);
     } else {
-        printf("%s", path);
+        printf("%s", file);
         if (flags & FLAG_F) {
             print_indicator(sb);
         }
@@ -83,7 +83,7 @@ print_file(char *path, const struct stat *sb, int flags)
 }
 
 void
-print_file_long(const char *path, const struct stat *sb, int flags)
+print_file_long(char *file, char *path, const struct stat *sb, int flags)
 {
     char modes[MODESTR_SZ];
     char timebuf[TIMEBUF_SZ];
@@ -134,12 +134,12 @@ print_file_long(const char *path, const struct stat *sb, int flags)
 
     if (S_ISCHR(sb->st_mode)) {
         printf("%u, %u %s %s", major(sb->st_rdev), minor(sb->st_rdev), 
-            timebuf, path);
+            timebuf, file);
     } else if (flags & FLAG_h) {
         humanize(sb->st_size);
-        printf(" %s %s", timebuf, path);
+        printf(" %s %s", timebuf, file);
     } else {
-        printf("%lld %s %s", (long long)sb->st_size, timebuf, path);
+        printf("%lld %s %s", (long long)sb->st_size, timebuf, file);
     }
 
     if (flags & FLAG_F) {
@@ -147,13 +147,15 @@ print_file_long(const char *path, const struct stat *sb, int flags)
     }
 
     if (S_ISLNK(sb->st_mode)) {
-        char filename[PATH_MAX];
+        char filename[PATH_MAX], fullpath[PATH_MAX];
         ssize_t len;
-        if ((len = readlink(path, filename, sizeof(filename))) < 0) {
-            fprintf(stderr, "stat: readlink: %s\n", strerror(errno));
+        snprintf(fullpath, sizeof(fullpath), "%s/%s", path, file);
+        if ((len = readlink(fullpath, filename, sizeof(filename))) < 0) {
+            (void)fprintf(stderr, "ls: readlink: %s: %s\n", fullpath, strerror(errno));
             exit(EXIT_FAILURE);
+        } else {
+            filename[len] = '\0';
         }
-        filename[len] = '\0';
         printf(" -> %s", filename);
     }
 }

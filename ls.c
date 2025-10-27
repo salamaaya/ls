@@ -69,7 +69,7 @@ traverse(char *paths[], int flags)
         path = entry->fts_path;
         file = entry->fts_name;
         level = entry->fts_level;
-        print_header = !(flags & FLAG_R)
+        print_header = (!(flags & FLAG_R) && level == 0) 
                 || ((flags & FLAG_R) && level > 0);
 
         if (info == FTS_DNR || info == FTS_ERR) {
@@ -86,27 +86,31 @@ traverse(char *paths[], int flags)
                 stop_traverse = 0;
             }
 
+            print_header = print_header && (!stop_traverse || !(flags & FLAG_R));
+
             if (flags & FLAG_d) {
                 printf("%s\n", path);
             }
             if (flags & FLAG_headers) {
-                if (num_headers > 0 && !stop_traverse) {
+                if (num_headers > 0 && ((!stop_traverse) || !(flags & FLAG_R))) {
                     printf("\n");
                 }
 
-                if (print_header && !stop_traverse) {
+                if (print_header) {
                     printf("%s:\n", path);
                 }
                 num_headers++;
             }
-            if ((flags & FLAG_l) && (level == 0 || (flags & FLAG_R))) {
+            if (flags & FLAG_l && ((!stop_traverse) || !(flags & FLAG_R))) {
                 blk_size = get_dir_blk_size(path, flags);
-                printf("total ");
-                if (flags & FLAG_h) {
-                    humanize(blk_size);
-                    printf("\n");
-                } else {
-                    printf("%ld\n", blk_size);
+                if (blk_size >= 0) {
+                    printf("total ");
+                    if (flags & FLAG_h) {
+                        humanize(blk_size);
+                        printf("\n");
+                    } else {
+                        printf("%ld\n", blk_size);
+                    }
                 }
             }
 
@@ -121,7 +125,7 @@ traverse(char *paths[], int flags)
                 traverse_children(fts, flags, print_dot);
             }
         } else if (info != FTS_D && info != FTS_DP && level == 0) {
-            print_file(file, entry->fts_statp, flags);
+            print_file(file, path, entry->fts_statp, flags);
         }
     }
 
@@ -140,8 +144,9 @@ traverse_children(FTS *fts, int flags, int print_hidden)
 
     while (node != NULL) {
         file = node->fts_name;
+
         if ((print_hidden && is_hidden(file)) || !is_hidden(file)) {
-            print_file(file, node->fts_statp, flags);
+            print_file(file, node->fts_path, node->fts_statp, flags);
         }
         node = node->fts_link;
     }
@@ -256,8 +261,8 @@ main(int argc, char *argv[])
      * that way, we can traverse the files first and then directories since
      * fts_open does not do that */
     for (i = 0; i < argc; i++) {
-        if (stat(argv[i], &info) < 0) {
-            (void)fprintf(stderr, "ls: stat: %s\n", strerror(errno));
+        if (lstat(argv[i], &info) < 0) {
+            (void)fprintf(stderr, "ls: lstat: %s\n", strerror(errno));
             continue;
         }
 

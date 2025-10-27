@@ -39,10 +39,9 @@ get_dir_blk_size(const char *dir, int flags)
     (void)getbsize(NULL, &blk_size);
 
     if ((dp = opendir(dir)) == NULL) {
-        (void)fprintf(stderr, "ls: opendir: %s\n", strerror(errno));
-        exit(EXIT_FAILURE);
+        return -1;
     }
-    
+ 
     while ((entry = readdir(dp))) {
         /* only count hidden files if -A or -a is set
          * and only count "." and ".." if -a is set */
@@ -61,7 +60,7 @@ get_dir_blk_size(const char *dir, int flags)
         }
 
         if (lstat(path, &info) < 0) {
-            (void)fprintf(stderr, "ls: stat: %s: %s\n", path, strerror(errno));
+            (void)fprintf(stderr, "ls: lstat: %s: %s\n", path, strerror(errno));
             continue;
         }
 
