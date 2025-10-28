@@ -151,7 +151,8 @@ print_file_long(char *file, char *path, const struct stat *sb, int flags)
         snprintf(fullpath, sizeof(fullpath), "%s/%s", path, file);
         if ((len = readlink(fullpath, filename, sizeof(filename))) < 0) {
             (void)fprintf(stderr, "ls: readlink: %s: %s\n", fullpath, strerror(errno));
-            exit(EXIT_FAILURE);
+            /*exit(EXIT_FAILURE);*/
+            return;
         } else {
             filename[len] = '\0';
         }

@@ -90,7 +90,7 @@ traverse(char *paths[], int flags)
 
         if (info == FTS_DNR || info == FTS_ERR) {
             (void)fprintf(stderr, "ls: fts_read: %s\n", strerror(errno));
-            exit(EXIT_FAILURE);
+            /*exit(EXIT_FAILURE);*/
         }
 
         if (info == FTS_D) {
